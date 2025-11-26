@@ -50,7 +50,7 @@ use num_integer::div_rem;
 use num_traits::{ToPrimitive, Zero};
 use serde::{Deserialize, Serialize};
 
-use super::{builtin_runner::ModBuiltinRunner, cairo_pie::CairoPieAdditionalData};
+use super::{builtin_runner::ModBuiltinRunner, cairo_pie::CairoPieAdditionalData, hook::RunnerPreStepHook};
 use super::{
     builtin_runner::{
         KeccakBuiltinRunner, PoseidonBuiltinRunner, RC_N_PARTS_96, RC_N_PARTS_STANDARD,
@@ -159,6 +159,7 @@ pub struct CairoRunner {
     pub relocated_memory: Vec<Option<Felt252>>,
     pub exec_scopes: ExecutionScopes,
     pub relocated_trace: Option<Vec<RelocatedTraceEntry>>,
+    pub(crate) pre_step_hook: Option<Box<dyn RunnerPreStepHook>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -220,6 +221,7 @@ impl CairoRunner {
                 None
             },
             relocated_trace: None,
+            pre_step_hook: None,
         })
     }
 
@@ -692,6 +694,7 @@ impl CairoRunner {
         #[cfg(feature = "test_utils")]
         self.vm.execute_before_first_step(&hint_data)?;
         while self.vm.get_pc() != address && !hint_processor.consumed() {
+            self.execute_pre_step_hook();
             self.vm.step(
                 hint_processor,
                 &mut self.exec_scopes,
