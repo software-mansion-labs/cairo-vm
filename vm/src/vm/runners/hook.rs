@@ -1,8 +1,9 @@
+use crate::vm::errors::vm_errors::VirtualMachineError;
 use crate::vm::runners::cairo_runner::CairoRunner;
 use crate::vm::vm_core::VirtualMachine;
 
 pub trait RunnerPreStepHook {
-    fn execute(&self, vm: &VirtualMachine);
+    fn execute(&self, vm: &VirtualMachine) -> Result<(), VirtualMachineError>;
 }
 
 impl CairoRunner {
@@ -10,9 +11,11 @@ impl CairoRunner {
         self.pre_step_hook = Some(Box::new(pre_step_hook));
     }
 
-    pub fn execute_pre_step_hook(&self) {
+    pub fn execute_pre_step_hook(&self) -> Result<(), VirtualMachineError> {
         if let Some(hook) = &self.pre_step_hook {
-            hook.execute(&self.vm);
+            hook.execute(&self.vm)?;
         }
+
+        Ok(())
     }
 }
